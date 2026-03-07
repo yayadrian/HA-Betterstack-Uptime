@@ -1,6 +1,12 @@
 # Better Stack Uptime for Home Assistant
 
+[![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/yayadrian)
+[![](https://img.shields.io/static/v1?label=Support&message=Ko-fi&logo=kofi&color=%23FF6433&logoColor=white)](https://ko-fi.com/yayadrian)
+
 A custom [Home Assistant](https://www.home-assistant.io/) integration that monitors your [Better Stack Uptime](https://betterstack.com/uptime) monitors. Each monitor gets a device with two entities — a binary sensor indicating whether the monitor is up, and a sensor showing the raw status string.
+
+> [!WARNING]
+> This is an unofficial community integration. It is not created by, affiliated with, endorsed by, or supported by Better Stack.
 
 ## Features
 
@@ -15,16 +21,20 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration that monit
 ## Requirements
 
 - Home Assistant **2026.2.0** or newer.
-- A Better Stack API token — generate one at <https://betterstack.com/settings/global-api-tokens>.
+- A Better Stack API token — generate one at <https://betterstack.com/settings/global-api-tokens> then click `Team-based tokens`
 
 ## Installation
 
 ### HACS (recommended)
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=yayadrian&repository=HA-Betterstack-Uptime&category=Integration)
+
+
 1. Open **HACS** in Home Assistant.
 2. Go to **Integrations** and click the three-dot menu.
 3. Select **Custom repositories** and add this repository URL with category **Integration**.
 4. Search for **Better Stack Uptime** and install it.
+
 5. Restart Home Assistant.
 
 ### Manual
