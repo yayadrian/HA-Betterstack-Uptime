@@ -1,0 +1,82 @@
+"""Sensor platform for Better Stack Uptime."""
+
+from __future__ import annotations
+
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+from .const import DOMAIN, MONITOR_STATUS_OPTIONS
+from .coordinator import BetterStackCoordinator
+from .entity import (
+    BetterStackEntity,
+    async_remove_missing_monitors,
+    async_remove_stale_registry_entities,
+)
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up sensors from a config entry."""
+    coordinator: BetterStackCoordinator = hass.data[DOMAIN][entry.entry_id]
+
+    known_ids: set[str] = set()
+    current_ids = set(coordinator.data)
+
+    async_remove_stale_registry_entities(
+        hass,
+        entry,
+        current_ids,
+        "sensor",
+        "status",
+    )
+
+    @callback
+    def _async_add_new_monitors() -> None:
+        """Detect and add entities for newly discovered monitors."""
+        current_ids = set(coordinator.data)
+        async_remove_missing_monitors(
+            hass,
+            current_ids,
+            known_ids,
+            "sensor",
+            "status",
+        )
+
+        new_entities: list[BetterStackStatusSensor] = []
+        for monitor_id in current_ids:
+            if monitor_id not in known_ids:
+                known_ids.add(monitor_id)
+                new_entities.append(BetterStackStatusSensor(coordinator, monitor_id))
+        if new_entities:
+            async_add_entities(new_entities)
+
+    _async_add_new_monitors()
+    entry.async_on_unload(coordinator.async_add_listener(_async_add_new_monitors))
+
+
+class BetterStackStatusSensor(BetterStackEntity, SensorEntity):
+    """Sensor showing the raw monitor status string."""
+
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_icon = "mdi:web-check"
+    _attr_options = MONITOR_STATUS_OPTIONS
+    _attr_translation_key = "status"
+
+    def __init__(
+        self, coordinator: BetterStackCoordinator, monitor_id: str
+    ) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, monitor_id)
+        self._attr_unique_id = f"{monitor_id}-status"
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the raw monitor status string."""
+        if (data := self._monitor_data) is None:
+            return None
+        return data["status"]

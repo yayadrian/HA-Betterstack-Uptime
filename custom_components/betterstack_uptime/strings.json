@@ -1,0 +1,52 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Better Stack Uptime",
+        "description": "Enter your Better Stack API token. You can find it at https://betterstack.com/settings/global-api-tokens",
+        "data": {
+          "api_token": "API Token",
+          "poll_interval": "Poll interval (seconds)"
+        },
+        "data_description": {
+          "api_token": "Your Better Stack API token with read access to Uptime monitors.",
+          "poll_interval": "How often (in seconds) to poll Better Stack for monitor status updates."
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid API token",
+      "cannot_connect": "Cannot connect to Better Stack",
+      "server_error": "Better Stack returned a server error",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "This account is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Update Better Stack Uptime Options",
+        "data": {
+          "poll_interval": "Poll interval (seconds)"
+        },
+        "data_description": {
+          "poll_interval": "How often (in seconds) to poll Better Stack for monitor status updates."
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "up": {
+        "name": "Up"
+      }
+    },
+    "sensor": {
+      "status": {
+        "name": "Status"
+      }
+    }
+  }
+}
