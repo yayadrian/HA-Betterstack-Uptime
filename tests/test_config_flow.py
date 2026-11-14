@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
@@ -9,6 +10,7 @@ import pytest
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.betterstack_uptime.const import (
     API_TOKEN_URL,
@@ -241,3 +243,92 @@ async def test_options_flow(hass: HomeAssistant, mock_config_entry) -> None:
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {CONF_POLL_INTERVAL: 300}
     assert mock_config_entry.options[CONF_POLL_INTERVAL] == 300
+
+NEW_API_TOKEN = "new_api_token_0987654321"
+
+
+async def test_reauth_flow_success(hass: HomeAssistant, mock_config_entry) -> None:
+    """Test reauth replaces the token and unique ID on the existing entry."""
+    result = await mock_config_entry.start_reauth_flow(hass)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reauth_confirm"
+
+    with (
+        _patch_session(_mock_response(200)),
+        patch(
+            "custom_components.betterstack_uptime.async_setup_entry",
+            return_value=True,
+        ),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_API_TOKEN: NEW_API_TOKEN},
+        )
+        await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+    assert mock_config_entry.data[CONF_API_TOKEN] == NEW_API_TOKEN
+    assert (
+        mock_config_entry.unique_id
+        == hashlib.sha256(NEW_API_TOKEN.encode()).hexdigest()[:16]
+    )
+    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+
+
+async def test_reauth_flow_invalid_auth(hass: HomeAssistant, mock_config_entry) -> None:
+    """Test reauth shows an error for a rejected token and can recover."""
+    result = await mock_config_entry.start_reauth_flow(hass)
+
+    resp = _mock_response(401)
+    resp.raise_for_status = MagicMock()
+    with _patch_session(resp):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_API_TOKEN: NEW_API_TOKEN},
+        )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reauth_confirm"
+    assert result["errors"] == {"base": "invalid_auth"}
+    assert mock_config_entry.data[CONF_API_TOKEN] == TEST_API_TOKEN
+
+    with (
+        _patch_session(_mock_response(200)),
+        patch(
+            "custom_components.betterstack_uptime.async_setup_entry",
+            return_value=True,
+        ),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_API_TOKEN: NEW_API_TOKEN},
+        )
+        await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+
+
+async def test_reauth_flow_token_used_by_other_entry(
+    hass: HomeAssistant, mock_config_entry
+) -> None:
+    """Test reauth aborts when the new token belongs to another entry."""
+    other_entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_API_TOKEN: NEW_API_TOKEN},
+        unique_id=hashlib.sha256(NEW_API_TOKEN.encode()).hexdigest()[:16],
+    )
+    other_entry.add_to_hass(hass)
+
+    result = await mock_config_entry.start_reauth_flow(hass)
+
+    with _patch_session(_mock_response(200)):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_API_TOKEN: NEW_API_TOKEN},
+        )
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+    assert mock_config_entry.data[CONF_API_TOKEN] == TEST_API_TOKEN
