@@ -57,16 +57,21 @@ def mock_api_page(monitors: list[dict], next_url: str | None = None) -> dict:
     return {"data": monitors, "pagination": pagination}
 
 
-@pytest.fixture
-def mock_config_entry(hass: HomeAssistant):
-    """Create a mock config entry."""
-    entry = MockConfigEntry(
+def make_config_entry() -> MockConfigEntry:
+    """Build a config entry for the test API token."""
+    return MockConfigEntry(
         domain=DOMAIN,
         title="Better Stack Uptime",
         data={CONF_API_TOKEN: TEST_API_TOKEN},
         options={CONF_POLL_INTERVAL: 60},
         unique_id=hashlib.sha256(TEST_API_TOKEN.encode()).hexdigest()[:16],
     )
+
+
+@pytest.fixture
+def mock_config_entry(hass: HomeAssistant):
+    """Create a mock config entry."""
+    entry = make_config_entry()
     entry.add_to_hass(hass)
     return entry
 

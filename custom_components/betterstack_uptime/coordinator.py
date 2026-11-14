@@ -8,32 +8,38 @@ from typing import Any
 
 import aiohttp
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import API_BASE_URL
+from .const import API_BASE_URL, CONF_API_TOKEN, CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
+
+type BetterStackConfigEntry = ConfigEntry[BetterStackCoordinator]
 
 
 class BetterStackCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
     """Fetch Better Stack monitors and provide data to entities."""
 
+    config_entry: BetterStackConfigEntry
+
     def __init__(
         self,
         hass: HomeAssistant,
-        api_token: str,
-        poll_interval: int,
+        config_entry: BetterStackConfigEntry,
     ) -> None:
         """Initialize the coordinator."""
+        poll_interval = config_entry.options.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL)
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=config_entry,
             name="Better Stack Uptime",
             update_interval=timedelta(seconds=poll_interval),
         )
-        self._api_token = api_token
+        self._api_token = config_entry.data[CONF_API_TOKEN]
 
     async def _async_update_data(self) -> dict[str, dict[str, Any]]:
         """Fetch all monitors from Better Stack, handling pagination."""

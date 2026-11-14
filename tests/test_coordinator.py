@@ -11,7 +11,7 @@ from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from custom_components.betterstack_uptime.coordinator import BetterStackCoordinator
 
-from .conftest import MOCK_MONITORS, TEST_API_TOKEN, make_monitor, mock_api_page
+from .conftest import MOCK_MONITORS, make_config_entry, make_monitor, mock_api_page
 
 
 def _mock_session_with_pages(pages: list[dict]):
@@ -48,7 +48,7 @@ async def test_single_page_fetch(hass: HomeAssistant) -> None:
     """Test fetching monitors from a single page response."""
     page = mock_api_page(MOCK_MONITORS)
 
-    coordinator = BetterStackCoordinator(hass, TEST_API_TOKEN, 60)
+    coordinator = BetterStackCoordinator(hass, make_config_entry())
 
     with _mock_session_with_pages([page]):
         data = await coordinator._async_update_data()
@@ -70,7 +70,7 @@ async def test_paginated_fetch(hass: HomeAssistant) -> None:
     )
     page2 = mock_api_page([make_monitor("2", "Second")])
 
-    coordinator = BetterStackCoordinator(hass, TEST_API_TOKEN, 60)
+    coordinator = BetterStackCoordinator(hass, make_config_entry())
 
     with _mock_session_with_pages([page1, page2]):
         data = await coordinator._async_update_data()
@@ -84,7 +84,7 @@ async def test_empty_response(hass: HomeAssistant) -> None:
     """Test empty API response returns empty dict."""
     page = mock_api_page([])
 
-    coordinator = BetterStackCoordinator(hass, TEST_API_TOKEN, 60)
+    coordinator = BetterStackCoordinator(hass, make_config_entry())
 
     with _mock_session_with_pages([page]):
         data = await coordinator._async_update_data()
@@ -108,7 +108,7 @@ async def test_api_client_response_error(hass: HomeAssistant) -> None:
     ctx.__aexit__ = AsyncMock(return_value=False)
     session.get = MagicMock(return_value=ctx)
 
-    coordinator = BetterStackCoordinator(hass, TEST_API_TOKEN, 60)
+    coordinator = BetterStackCoordinator(hass, make_config_entry())
 
     with (
         patch(
@@ -125,7 +125,7 @@ async def test_api_client_error(hass: HomeAssistant) -> None:
     session = MagicMock()
     session.get = MagicMock(side_effect=aiohttp.ClientError("Connection refused"))
 
-    coordinator = BetterStackCoordinator(hass, TEST_API_TOKEN, 60)
+    coordinator = BetterStackCoordinator(hass, make_config_entry())
 
     with (
         patch(
@@ -149,7 +149,7 @@ async def test_data_extraction_fields(hass: HomeAssistant) -> None:
     )
     page = mock_api_page([monitor])
 
-    coordinator = BetterStackCoordinator(hass, TEST_API_TOKEN, 60)
+    coordinator = BetterStackCoordinator(hass, make_config_entry())
 
     with _mock_session_with_pages([page]):
         data = await coordinator._async_update_data()
@@ -168,7 +168,7 @@ async def test_data_extraction_defaults_for_missing_fields(hass: HomeAssistant) 
     monitor = {"id": "99", "attributes": {}}
     page = mock_api_page([monitor])
 
-    coordinator = BetterStackCoordinator(hass, TEST_API_TOKEN, 60)
+    coordinator = BetterStackCoordinator(hass, make_config_entry())
 
     with _mock_session_with_pages([page]):
         data = await coordinator._async_update_data()
@@ -193,7 +193,7 @@ async def test_monitor_ids_are_normalized_to_strings(hass: HomeAssistant) -> Non
     }
     page = mock_api_page([monitor])
 
-    coordinator = BetterStackCoordinator(hass, TEST_API_TOKEN, 60)
+    coordinator = BetterStackCoordinator(hass, make_config_entry())
 
     with _mock_session_with_pages([page]):
         data = await coordinator._async_update_data()
