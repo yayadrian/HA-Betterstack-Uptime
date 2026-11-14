@@ -206,7 +206,7 @@ async def test_data_extraction_defaults_for_missing_fields(hass: HomeAssistant) 
     m = data["99"]
     assert m["id"] == "99"
     assert m["pronounceable_name"] == "Monitor 99"
-    assert m["status"] == "unknown"
+    assert m["status"] is None
     assert m["monitor_type"] is None
     assert m["url"] is None
     assert m["last_checked_at"] is None

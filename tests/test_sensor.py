@@ -22,7 +22,7 @@ def _make_coordinator(hass: HomeAssistant, data: dict) -> BetterStackCoordinator
 
 def _monitor_data(
     monitor_id: str = "100",
-    status: str = "up",
+    status: str | None = "up",
     name: str = "Test Monitor",
     monitor_type: str = "keyword",
     url: str = "https://example.com",
@@ -51,6 +51,16 @@ async def test_native_value(hass: HomeAssistant, status: str) -> None:
     assert sensor.native_value == status
 
 
+@pytest.mark.parametrize("status", ["unknown", "something_new", None])
+async def test_native_value_unrecognised_status(
+    hass: HomeAssistant, status: str | None
+) -> None:
+    """Test statuses outside the enum options are reported as unknown."""
+    coordinator = _make_coordinator(hass, _monitor_data(status=status))
+    sensor = BetterStackStatusSensor(coordinator, "100")
+    assert sensor.native_value is None
+
+
 async def test_sensor_exposes_enum_metadata(hass: HomeAssistant) -> None:
     """Test status sensor is exposed as an enum sensor."""
     coordinator = _make_coordinator(hass, _monitor_data(status="pending"))
@@ -58,6 +68,7 @@ async def test_sensor_exposes_enum_metadata(hass: HomeAssistant) -> None:
 
     assert sensor.device_class == SensorDeviceClass.ENUM
     assert sensor.options == MONITOR_STATUS_OPTIONS
+    assert "unknown" not in sensor.options
 
 
 async def test_unique_id(hass: HomeAssistant) -> None:

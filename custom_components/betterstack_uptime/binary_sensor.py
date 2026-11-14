@@ -83,6 +83,6 @@ class BetterStackUpBinarySensor(BetterStackEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool | None:
         """Return True when the monitor is up."""
-        if (data := self._monitor_data) is None:
+        if (data := self._monitor_data) is None or data["status"] is None:
             return None
         return data["status"] in STATUSES_UP

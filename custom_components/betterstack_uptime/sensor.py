@@ -65,7 +65,6 @@ class BetterStackStatusSensor(BetterStackEntity, SensorEntity):
     """Sensor showing the raw monitor status string."""
 
     _attr_device_class = SensorDeviceClass.ENUM
-    _attr_icon = "mdi:web-check"
     _attr_options = MONITOR_STATUS_OPTIONS
     _attr_translation_key = "status"
 
@@ -78,7 +77,9 @@ class BetterStackStatusSensor(BetterStackEntity, SensorEntity):
 
     @property
     def native_value(self) -> str | None:
-        """Return the raw monitor status string."""
+        """Return the monitor status, or None if it is not a known option."""
         if (data := self._monitor_data) is None:
             return None
-        return data["status"]
+        if (status := data["status"]) not in MONITOR_STATUS_OPTIONS:
+            return None
+        return status

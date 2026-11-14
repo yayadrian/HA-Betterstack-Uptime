@@ -56,7 +56,15 @@
     },
     "sensor": {
       "status": {
-        "name": "Status"
+        "name": "Status",
+        "state": {
+          "up": "Up",
+          "down": "Down",
+          "pending": "Pending",
+          "paused": "Paused",
+          "maintenance": "Maintenance",
+          "validating": "Validating"
+        }
       }
     }
   }
