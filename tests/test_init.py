@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from homeassistant.config_entries import ConfigEntryState
+from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
@@ -70,6 +71,27 @@ async def test_setup_entry_failure(hass: HomeAssistant, mock_config_entry) -> No
 
     assert result is False
     assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
+
+
+async def test_setup_entry_auth_failed_starts_reauth(
+    hass: HomeAssistant, mock_config_entry
+) -> None:
+    """Test a rejected token fails setup and starts a reauth flow."""
+    with patch.object(
+        BetterStackCoordinator,
+        "_async_update_data",
+        side_effect=ConfigEntryAuthFailed("Invalid token"),
+    ):
+        result = await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+
+    assert result is False
+    assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
+
+    flows = hass.config_entries.flow.async_progress()
+    assert len(flows) == 1
+    assert flows[0]["context"]["source"] == SOURCE_REAUTH
+    assert flows[0]["context"]["entry_id"] == mock_config_entry.entry_id
 
 
 async def test_removed_monitors_are_cleaned_up(hass: HomeAssistant, mock_config_entry) -> None:

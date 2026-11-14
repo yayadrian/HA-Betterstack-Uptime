@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import aiohttp
 import pytest
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from custom_components.betterstack_uptime.coordinator import BetterStackCoordinator
@@ -116,6 +117,35 @@ async def test_api_client_response_error(hass: HomeAssistant) -> None:
             return_value=session,
         ),
         pytest.raises(UpdateFailed, match="API request failed: 500"),
+    ):
+        await coordinator._async_update_data()
+
+
+@pytest.mark.parametrize("status", [401, 403])
+async def test_api_auth_error(hass: HomeAssistant, status: int) -> None:
+    """Test a rejected token raises ConfigEntryAuthFailed to trigger reauth."""
+    resp = AsyncMock()
+    resp.raise_for_status = MagicMock(
+        side_effect=aiohttp.ClientResponseError(
+            request_info=MagicMock(), history=(), status=status
+        )
+    )
+
+    session = MagicMock()
+
+    ctx = AsyncMock()
+    ctx.__aenter__ = AsyncMock(return_value=resp)
+    ctx.__aexit__ = AsyncMock(return_value=False)
+    session.get = MagicMock(return_value=ctx)
+
+    coordinator = BetterStackCoordinator(hass, make_config_entry())
+
+    with (
+        patch(
+            "custom_components.betterstack_uptime.coordinator.async_get_clientsession",
+            return_value=session,
+        ),
+        pytest.raises(ConfigEntryAuthFailed),
     ):
         await coordinator._async_update_data()
 

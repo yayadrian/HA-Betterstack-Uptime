@@ -10,6 +10,7 @@ import aiohttp
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -69,6 +70,10 @@ class BetterStackCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
                 url = payload.get("pagination", {}).get("next")
 
         except aiohttp.ClientResponseError as err:
+            if err.status in (401, 403):
+                raise ConfigEntryAuthFailed(
+                    f"Better Stack rejected the API token: {err.status}"
+                ) from err
             raise UpdateFailed(f"API request failed: {err.status}") from err
         except aiohttp.ClientError as err:
             raise UpdateFailed(f"Cannot reach Better Stack: {err}") from err

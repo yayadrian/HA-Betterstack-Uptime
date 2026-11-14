@@ -8,9 +8,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import aiohttp
 import pytest
 from homeassistant import config_entries
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.betterstack_uptime.config_flow import _token_unique_id
 from custom_components.betterstack_uptime.const import (
     API_TOKEN_URL,
     CONF_API_TOKEN,
@@ -246,3 +249,137 @@ async def test_options_flow(hass: HomeAssistant, mock_config_entry) -> None:
     assert result["data"] == {CONF_POLL_INTERVAL: 300}
     assert mock_config_entry.options[CONF_POLL_INTERVAL] == 300
     assert mock_config_entry.runtime_data.update_interval == timedelta(seconds=300)
+
+
+NEW_API_TOKEN = "new_api_token_0987654321"
+
+
+async def test_reauth_flow_success(hass: HomeAssistant, mock_config_entry) -> None:
+    """Test reauth replaces the token and unique ID on the existing entry."""
+    result = await mock_config_entry.start_reauth_flow(hass)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reauth_confirm"
+
+    with (
+        _patch_session(_mock_response(200)),
+        patch(
+            "custom_components.betterstack_uptime.async_setup_entry",
+            return_value=True,
+        ),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_API_TOKEN: NEW_API_TOKEN},
+        )
+        await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+    assert mock_config_entry.data[CONF_API_TOKEN] == NEW_API_TOKEN
+    assert (
+        mock_config_entry.unique_id
+        == _token_unique_id(NEW_API_TOKEN)
+    )
+    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
+
+
+async def test_reauth_flow_loaded_entry(
+    hass: HomeAssistant, mock_config_entry, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test reauth of a loaded entry reloads it with the new token."""
+    page = mock_api_page(MOCK_MONITORS)
+
+    resp = AsyncMock()
+    resp.status = 200
+    resp.raise_for_status = MagicMock()
+    resp.json = AsyncMock(return_value=page)
+
+    session = MagicMock()
+    ctx = AsyncMock()
+    ctx.__aenter__ = AsyncMock(return_value=resp)
+    ctx.__aexit__ = AsyncMock(return_value=False)
+    session.get = MagicMock(return_value=ctx)
+
+    with patch(
+        "custom_components.betterstack_uptime.coordinator.async_get_clientsession",
+        return_value=session,
+    ):
+        await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+        old_coordinator = mock_config_entry.runtime_data
+
+        result = await mock_config_entry.start_reauth_flow(hass)
+        with _patch_session(_mock_response(200)):
+            result = await hass.config_entries.flow.async_configure(
+                result["flow_id"],
+                {CONF_API_TOKEN: NEW_API_TOKEN},
+            )
+        await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+    assert mock_config_entry.state is ConfigEntryState.LOADED
+    assert mock_config_entry.runtime_data is not old_coordinator
+    assert (
+        session.get.call_args.kwargs["headers"]["Authorization"]
+        == f"Bearer {NEW_API_TOKEN}"
+    )
+    assert "update listener" not in caplog.text
+
+
+async def test_reauth_flow_invalid_auth(hass: HomeAssistant, mock_config_entry) -> None:
+    """Test reauth shows an error for a rejected token and can recover."""
+    result = await mock_config_entry.start_reauth_flow(hass)
+
+    resp = _mock_response(401)
+    resp.raise_for_status = MagicMock()
+    with _patch_session(resp):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_API_TOKEN: NEW_API_TOKEN},
+        )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reauth_confirm"
+    assert result["errors"] == {"base": "invalid_auth"}
+    assert mock_config_entry.data[CONF_API_TOKEN] == TEST_API_TOKEN
+
+    with (
+        _patch_session(_mock_response(200)),
+        patch(
+            "custom_components.betterstack_uptime.async_setup_entry",
+            return_value=True,
+        ),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_API_TOKEN: NEW_API_TOKEN},
+        )
+        await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+
+
+async def test_reauth_flow_token_used_by_other_entry(
+    hass: HomeAssistant, mock_config_entry
+) -> None:
+    """Test reauth aborts when the new token belongs to another entry."""
+    other_entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_API_TOKEN: NEW_API_TOKEN},
+        unique_id=_token_unique_id(NEW_API_TOKEN),
+    )
+    other_entry.add_to_hass(hass)
+
+    result = await mock_config_entry.start_reauth_flow(hass)
+
+    with _patch_session(_mock_response(200)):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_API_TOKEN: NEW_API_TOKEN},
+        )
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+    assert mock_config_entry.data[CONF_API_TOKEN] == TEST_API_TOKEN

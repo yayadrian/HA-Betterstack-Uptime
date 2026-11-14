@@ -12,6 +12,16 @@
           "api_token": "Your Better Stack API token with read access to Uptime monitors.",
           "poll_interval": "How often (in seconds) to poll Better Stack for monitor status updates."
         }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate Better Stack Uptime",
+        "description": "Better Stack rejected the API token for {name}. Enter a new API token. You can create one at {token_url} under **Team-based tokens**.",
+        "data": {
+          "api_token": "API Token"
+        },
+        "data_description": {
+          "api_token": "Your Better Stack API token with read access to Uptime monitors."
+        }
       }
     },
     "error": {
@@ -21,7 +31,8 @@
       "unknown": "Unexpected error"
     },
     "abort": {
-      "already_configured": "This account is already configured"
+      "already_configured": "This account is already configured",
+      "reauth_successful": "Reauthentication was successful"
     }
   },
   "options": {
