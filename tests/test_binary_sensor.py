@@ -32,7 +32,6 @@ def _monitor_data(
 ) -> dict:
     return {
         monitor_id: {
-            "kind": "monitor",
             "id": monitor_id,
             "pronounceable_name": name,
             "status": status,
@@ -53,7 +52,6 @@ def _heartbeat_data(
 ) -> dict:
     return {
         f"heartbeat-{heartbeat_id}": {
-            "kind": "heartbeat",
             "id": heartbeat_id,
             "name": name,
             "status": status,

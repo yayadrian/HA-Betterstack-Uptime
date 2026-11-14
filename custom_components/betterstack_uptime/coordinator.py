@@ -20,8 +20,6 @@ from .const import (
     CONF_POLL_INTERVAL,
     DEFAULT_POLL_INTERVAL,
     HEARTBEAT_ID_PREFIX,
-    KIND_HEARTBEAT,
-    KIND_MONITOR,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -51,7 +49,9 @@ class BetterStackCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
             update_interval=timedelta(seconds=poll_interval),
         )
         self._api_token = config_entry.data[CONF_API_TOKEN]
-        self._heartbeats_forbidden_logged = False
+        # False while the token cannot read heartbeats; their entities are
+        # then kept as unavailable rather than removed
+        self.heartbeats_available = True
 
     async def _async_fetch_all(self, endpoint: str) -> list[dict[str, Any]]:
         """Fetch every item from a paginated Better Stack endpoint."""
@@ -77,16 +77,16 @@ class BetterStackCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
         except aiohttp.ClientResponseError as err:
             if err.status not in _AUTH_ERROR_STATUSES:
                 raise
-            if not self._heartbeats_forbidden_logged:
+            if self.heartbeats_available:
                 _LOGGER.warning(
                     "Better Stack API token cannot read heartbeats (HTTP %s); "
-                    "only monitors will be shown",
+                    "heartbeat entities will be unavailable",
                     err.status,
                 )
-                self._heartbeats_forbidden_logged = True
+                self.heartbeats_available = False
             return []
 
-        self._heartbeats_forbidden_logged = False
+        self.heartbeats_available = True
         return heartbeats
 
     async def _async_update_data(self) -> dict[str, dict[str, Any]]:
@@ -98,7 +98,6 @@ class BetterStackCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
                 monitor_id = str(item["id"])
                 attrs = item.get("attributes", {})
                 checks[monitor_id] = {
-                    "kind": KIND_MONITOR,
                     "id": monitor_id,
                     "pronounceable_name": attrs.get("pronounceable_name", f"Monitor {monitor_id}"),
                     "status": attrs.get("status"),
@@ -113,9 +112,8 @@ class BetterStackCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
                 # The heartbeat URL lets anyone report on the heartbeat's
                 # behalf, so it is deliberately never stored
                 checks[f"{HEARTBEAT_ID_PREFIX}{heartbeat_id}"] = {
-                    "kind": KIND_HEARTBEAT,
                     "id": heartbeat_id,
-                    "name": attrs.get("name", f"Heartbeat {heartbeat_id}"),
+                    "name": attrs.get("name") or f"Heartbeat {heartbeat_id}",
                     "status": attrs.get("status"),
                     "period": attrs.get("period"),
                     "grace": attrs.get("grace"),

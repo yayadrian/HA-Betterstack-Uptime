@@ -1,6 +1,6 @@
 # Better Stack Uptime
 
-A Home Assistant integration that mirrors the state of a Better Stack Uptime account's checks as Home Assistant devices and entities.
+A Home Assistant integration that mirrors a Better Stack Uptime account's checks, and their status, as Home Assistant devices and entities.
 
 ## Language
 

@@ -85,7 +85,7 @@ For each monitor and each heartbeat returned by the Better Stack API, a device i
 - The device model is `Heartbeat`.
 - Extra attributes: `period` and `grace` (both in seconds) and `paused_at`.
 - The heartbeat URL is never exposed, because anyone who has it can report on the heartbeat's behalf.
-- If your API token cannot read heartbeats, a warning is logged and only monitors are shown.
+- If your API token cannot read heartbeats, a warning is logged and heartbeat entities show as unavailable until access returns. They are not deleted, so any renames or settings are kept.
 
 ## License
 

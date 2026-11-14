@@ -30,12 +30,10 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
 
     known_ids: set[str] = set()
-    current_ids = set(coordinator.data)
 
     async_remove_stale_registry_entities(
         hass,
         entry,
-        current_ids,
         "binary_sensor",
         "up",
     )
@@ -43,17 +41,16 @@ async def async_setup_entry(
     @callback
     def _async_add_new_checks() -> None:
         """Detect and add entities for newly discovered checks."""
-        current_ids = set(coordinator.data)
         async_remove_missing_checks(
             hass,
-            current_ids,
+            coordinator,
             known_ids,
             "binary_sensor",
             "up",
         )
 
         new_entities: list[BetterStackUpBinarySensor] = []
-        for check_id in current_ids:
+        for check_id in coordinator.data:
             if check_id not in known_ids:
                 known_ids.add(check_id)
                 new_entities.append(BetterStackUpBinarySensor(coordinator, check_id))

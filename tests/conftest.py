@@ -166,7 +166,6 @@ def mock_coordinator_data():
     """Return processed coordinator data (as the coordinator would produce)."""
     return {
         "1001": {
-            "kind": "monitor",
             "id": "1001",
             "pronounceable_name": "Web App",
             "status": "up",
@@ -175,7 +174,6 @@ def mock_coordinator_data():
             "last_checked_at": "2025-01-01T00:00:00Z",
         },
         "1002": {
-            "kind": "monitor",
             "id": "1002",
             "pronounceable_name": "API",
             "status": "down",
@@ -184,7 +182,6 @@ def mock_coordinator_data():
             "last_checked_at": "2025-01-01T00:00:00Z",
         },
         "1003": {
-            "kind": "monitor",
             "id": "1003",
             "pronounceable_name": "Staging",
             "status": "validating",
@@ -193,7 +190,6 @@ def mock_coordinator_data():
             "last_checked_at": "2025-01-01T00:00:00Z",
         },
         "heartbeat-1001": {
-            "kind": "heartbeat",
             "id": "1001",
             "name": "Nightly Backup",
             "status": "up",

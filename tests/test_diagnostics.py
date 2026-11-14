@@ -29,7 +29,7 @@ async def test_diagnostics_redacts_token(
     assert result["checks"].keys() == mock_coordinator_data.keys()
     for check_id, check in result["checks"].items():
         assert check["status"] == mock_coordinator_data[check_id]["status"]
-        if check["kind"] == "monitor":
+        if not check_id.startswith("heartbeat-"):
             assert check["url"] == REDACTED
     assert result["checks"]["heartbeat-1001"]["name"] == "Nightly Backup"
     # The coordinator's own data is not modified

@@ -4,14 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, HEARTBEAT_ID_PREFIX
-from .coordinator import BetterStackCoordinator
+from .coordinator import BetterStackConfigEntry, BetterStackCoordinator
 
 
 def _check_id_from_unique_id(unique_id: str, suffix: str) -> str | None:
@@ -22,11 +21,20 @@ def _check_id_from_unique_id(unique_id: str, suffix: str) -> str | None:
     return unique_id[: -len(suffix_marker)]
 
 
+def _is_kept(coordinator: BetterStackCoordinator, check_id: str) -> bool:
+    """Return True if entities for this check should be kept."""
+    if check_id in coordinator.data:
+        return True
+    # Without heartbeat access a heartbeat may still exist, so keep it unavailable
+    return not coordinator.heartbeats_available and check_id.startswith(
+        HEARTBEAT_ID_PREFIX
+    )
+
+
 @callback
 def async_remove_stale_registry_entities(
     hass: HomeAssistant,
-    entry: ConfigEntry,
-    current_ids: set[str],
+    entry: BetterStackConfigEntry,
     entity_domain: str,
     unique_id_suffix: str,
 ) -> None:
@@ -38,7 +46,7 @@ def async_remove_stale_registry_entities(
             continue
 
         check_id = _check_id_from_unique_id(entity_entry.unique_id, unique_id_suffix)
-        if check_id is None or check_id in current_ids:
+        if check_id is None or _is_kept(entry.runtime_data, check_id):
             continue
 
         entity_registry.async_remove(entity_entry.entity_id)
@@ -47,7 +55,7 @@ def async_remove_stale_registry_entities(
 @callback
 def async_remove_missing_checks(
     hass: HomeAssistant,
-    current_ids: set[str],
+    coordinator: BetterStackCoordinator,
     known_ids: set[str],
     entity_domain: str,
     unique_id_suffix: str,
@@ -55,7 +63,9 @@ def async_remove_missing_checks(
     """Remove runtime entities for checks that disappeared from Better Stack."""
     entity_registry = er.async_get(hass)
 
-    for check_id in known_ids - current_ids:
+    for check_id in set(known_ids):
+        if _is_kept(coordinator, check_id):
+            continue
         known_ids.remove(check_id)
         if entity_id := entity_registry.async_get_entity_id(
             entity_domain, DOMAIN, f"{check_id}-{unique_id_suffix}"

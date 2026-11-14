@@ -165,7 +165,6 @@ async def test_data_extraction_fields(hass: HomeAssistant) -> None:
         data = await coordinator._async_update_data()
 
     m = data["42"]
-    assert m["kind"] == "monitor"
     assert m["id"] == "42"
     assert m["pronounceable_name"] == "Production"
     assert m["status"] == "down"
@@ -222,8 +221,8 @@ async def test_heartbeats_fetched_with_prefixed_keys(hass: HomeAssistant) -> Non
 
     # Monitor 1001 and heartbeat 1001 share an ID in Better Stack
     assert set(data) == {"1001", "1002", "1003", "heartbeat-1001", "heartbeat-2001"}
-    assert data["1001"]["kind"] == "monitor"
-    assert data["heartbeat-1001"]["kind"] == "heartbeat"
+    assert data["1001"]["pronounceable_name"] == "Web App"
+    assert data["heartbeat-1001"]["name"] == "Nightly Backup"
     assert data["heartbeat-2001"]["status"] == "down"
 
 
@@ -243,7 +242,6 @@ async def test_heartbeat_data_extraction_fields(hass: HomeAssistant) -> None:
         data = await coordinator._async_update_data()
 
     assert data["heartbeat-7"] == {
-        "kind": "heartbeat",
         "id": "7",
         "name": "Backups",
         "status": "paused",
@@ -264,6 +262,17 @@ async def test_heartbeat_defaults_for_missing_fields(hass: HomeAssistant) -> Non
     assert h["id"] == "8"
     assert h["name"] == "Heartbeat 8"
     assert h["status"] is None
+
+
+async def test_heartbeat_null_name_falls_back(hass: HomeAssistant) -> None:
+    """Test a null heartbeat name falls back to one built from the ID."""
+    heartbeat = {"id": "9", "attributes": {"name": None, "status": "up"}}
+    coordinator = BetterStackCoordinator(hass, make_config_entry())
+
+    with mock_session([mock_api_page([])], [mock_api_page([heartbeat])]):
+        data = await coordinator._async_update_data()
+
+    assert data["heartbeat-9"]["name"] == "Heartbeat 9"
 
 
 async def test_paginated_heartbeats(hass: HomeAssistant) -> None:
@@ -295,7 +304,14 @@ async def test_heartbeats_forbidden_keeps_monitors(
         second = await coordinator._async_update_data()
 
     assert set(first) == set(second) == {"1001", "1002", "1003"}
+    assert coordinator.heartbeats_available is False
     assert caplog.text.count("cannot read heartbeats") == 1
+
+    # Access coming back clears the flag
+    with mock_session([mock_api_page(MOCK_MONITORS)], [mock_api_page(MOCK_HEARTBEATS)]):
+        await coordinator._async_update_data()
+
+    assert coordinator.heartbeats_available is True
 
 
 async def test_heartbeats_server_error_fails_update(hass: HomeAssistant) -> None:

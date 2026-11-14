@@ -26,10 +26,6 @@ CHECK_STATUS_OPTIONS = [
 # Statuses considered "up" for the binary sensor
 STATUSES_UP = {"up", "validating"}
 
-# Kinds of check; stored on each coordinator entry as "kind"
-KIND_MONITOR = "monitor"
-KIND_HEARTBEAT = "heartbeat"
-
-# Heartbeat IDs share a number space with monitor IDs, so heartbeat keys,
-# unique IDs and device identifiers carry this prefix (see docs/adr/0001)
+# Heartbeat IDs can collide with monitor IDs, so heartbeat keys, unique IDs
+# and device identifiers carry this prefix (see docs/adr/0001)
 HEARTBEAT_ID_PREFIX = "heartbeat-"
