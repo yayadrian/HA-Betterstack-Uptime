@@ -17,25 +17,36 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration that monit
 - Automatic cleanup of entities for monitors removed from Better Stack.
 - Configurable poll interval (15 – 3600 seconds, default 60).
 - Full pagination support for accounts with many monitors.
+- Prompts for a new API token if Better Stack rejects the current one.
+- Diagnostics download with the API token redacted.
 
 ## Requirements
 
-- Home Assistant **2026.2.0** or newer.
+- Home Assistant **2026.3.0** or newer.
 - A Better Stack API token — generate one at <https://betterstack.com/settings/global-api-tokens> then click `Team-based tokens`
 
 ## Installation
 
-### HACS (recommended)
+### Marketplace (recommended)
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=yayadrian&repository=HA-Betterstack-Uptime&category=Integration)
+[![Open your Home Assistant instance and open this repository in the Marketplace.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=yayadrian&repository=HA-Betterstack-Uptime&category=integration)
 
+On Home Assistant 2026.11 or newer, select the button above, or:
 
-1. Open **HACS** in Home Assistant.
-2. Go to **Integrations** and click the three-dot menu.
-3. Select **Custom repositories** and add this repository URL with category **Integration**.
-4. Search for **Better Stack Uptime** and install it.
-
+1. Go to **Settings > Marketplace**.
+2. In the upper-right corner, select **Add from link**.
+3. Under **GitHub link**, enter `yayadrian/HA-Betterstack-Uptime` and select **Add**. If asked for a **Type**, choose **Integration**.
+4. Open **Better Stack Uptime** and install it.
 5. Restart Home Assistant.
+
+The Marketplace asks you to connect GitHub the first time you add a repository from a link.
+
+### HACS (Home Assistant 2026.10 or older)
+
+1. Open **HACS** and select the three-dot menu in the top-right corner.
+2. Select **Custom repositories**, add `https://github.com/yayadrian/HA-Betterstack-Uptime` with type **Integration**, and select **Add**.
+3. Search for **Better Stack Uptime** and download it.
+4. Restart Home Assistant.
 
 ### Manual
 
@@ -48,6 +59,8 @@ A custom [Home Assistant](https://www.home-assistant.io/) integration that monit
 2. Search for **Better Stack Uptime**.
 3. Enter your API token and (optionally) a custom poll interval in seconds.
 
+If the token is later revoked or expires, Home Assistant shows a **Reauthenticate** prompt for the integration where you can enter a new one. The poll interval can be changed at any time from the integration's **Configure** option.
+
 ## Entities
 
 For each monitor returned by the Better Stack API, a device is created with:
@@ -55,7 +68,7 @@ For each monitor returned by the Better Stack API, a device is created with:
 | Entity | Type | Description |
 | --- | --- | --- |
 | **Up** | Binary sensor | `on` if the monitor status is `up` or `validating` |
-| **Status** | Enum sensor | Raw status string from Better Stack |
+| **Status** | Enum sensor | `up`, `down`, `pending`, `paused`, `maintenance` or `validating`; any other value from Better Stack is shown as unknown |
 
 ## License
 
