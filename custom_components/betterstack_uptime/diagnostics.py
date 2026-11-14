@@ -10,7 +10,8 @@ from homeassistant.core import HomeAssistant
 from .const import CONF_API_TOKEN
 from .coordinator import BetterStackConfigEntry
 
-TO_REDACT = {CONF_API_TOKEN}
+# Monitor URLs can embed credentials or query tokens
+TO_REDACT = {CONF_API_TOKEN, "url"}
 
 
 async def async_get_config_entry_diagnostics(
@@ -24,5 +25,5 @@ async def async_get_config_entry_diagnostics(
             "options": dict(entry.options),
         },
         "last_update_success": coordinator.last_update_success,
-        "monitors": coordinator.data,
+        "monitors": async_redact_data(coordinator.data, TO_REDACT),
     }

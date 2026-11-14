@@ -2,7 +2,7 @@
   "entity": {
     "sensor": {
       "status": {
-        "default": "mdi:web-check",
+        "default": "mdi:web",
         "state": {
           "up": "mdi:web-check",
           "down": "mdi:web-remove",
