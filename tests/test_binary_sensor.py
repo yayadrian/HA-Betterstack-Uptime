@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
-
 import pytest
 from homeassistant.core import HomeAssistant
 
@@ -60,9 +58,12 @@ async def test_is_on_by_status(hass: HomeAssistant, status: str, expected: bool)
     assert sensor.is_on is expected
 
 
-async def test_is_on_missing_status(hass: HomeAssistant) -> None:
-    """Test is_on is unknown when Better Stack returns no status."""
-    coordinator = _make_coordinator(hass, _monitor_data(status=None))
+@pytest.mark.parametrize("status", [None, "unknown", "something_new"])
+async def test_is_on_unrecognised_status(
+    hass: HomeAssistant, status: str | None
+) -> None:
+    """Test is_on is unknown for a missing or unrecognised status."""
+    coordinator = _make_coordinator(hass, _monitor_data(status=status))
     sensor = BetterStackUpBinarySensor(coordinator, "100")
     assert sensor.is_on is None
 
