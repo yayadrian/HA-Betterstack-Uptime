@@ -9,7 +9,7 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import STATUSES_UP
+from .const import MONITOR_STATUS_OPTIONS, STATUSES_UP
 from .coordinator import BetterStackConfigEntry, BetterStackCoordinator
 from .entity import (
     BetterStackEntity,
@@ -82,7 +82,9 @@ class BetterStackUpBinarySensor(BetterStackEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool | None:
-        """Return True when the monitor is up."""
+        """Return True when the monitor is up, or None for an unrecognised status."""
         if (data := self._monitor_data) is None:
             return None
-        return data["status"] in STATUSES_UP
+        if (status := data["status"]) not in MONITOR_STATUS_OPTIONS:
+            return None
+        return status in STATUSES_UP

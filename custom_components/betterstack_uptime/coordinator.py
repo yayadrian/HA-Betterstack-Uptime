@@ -61,7 +61,7 @@ class BetterStackCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
                     monitors[monitor_id] = {
                         "id": monitor_id,
                         "pronounceable_name": attrs.get("pronounceable_name", f"Monitor {monitor_id}"),
-                        "status": attrs.get("status", "unknown"),
+                        "status": attrs.get("status"),
                         "monitor_type": attrs.get("monitor_type"),
                         "url": attrs.get("url"),
                         "last_checked_at": attrs.get("last_checked_at"),

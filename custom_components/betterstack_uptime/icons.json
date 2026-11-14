@@ -1,0 +1,17 @@
+{
+  "entity": {
+    "sensor": {
+      "status": {
+        "default": "mdi:web",
+        "state": {
+          "up": "mdi:web-check",
+          "down": "mdi:web-remove",
+          "pending": "mdi:web-clock",
+          "paused": "mdi:pause-circle-outline",
+          "maintenance": "mdi:wrench-clock",
+          "validating": "mdi:web-sync"
+        }
+      }
+    }
+  }
+}

@@ -23,7 +23,7 @@ def _make_coordinator(hass: HomeAssistant, data: dict) -> BetterStackCoordinator
 
 def _monitor_data(
     monitor_id: str = "100",
-    status: str = "up",
+    status: str | None = "up",
     name: str = "Test Monitor",
     monitor_type: str = "keyword",
     url: str = "https://example.com",
@@ -56,6 +56,16 @@ async def test_is_on_by_status(hass: HomeAssistant, status: str, expected: bool)
     coordinator = _make_coordinator(hass, _monitor_data(status=status))
     sensor = BetterStackUpBinarySensor(coordinator, "100")
     assert sensor.is_on is expected
+
+
+@pytest.mark.parametrize("status", [None, "unknown", "something_new"])
+async def test_is_on_unrecognised_status(
+    hass: HomeAssistant, status: str | None
+) -> None:
+    """Test is_on is unknown for a missing or unrecognised status."""
+    coordinator = _make_coordinator(hass, _monitor_data(status=status))
+    sensor = BetterStackUpBinarySensor(coordinator, "100")
+    assert sensor.is_on is None
 
 
 async def test_unique_id(hass: HomeAssistant) -> None:
