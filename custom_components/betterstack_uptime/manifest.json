@@ -1,12 +1,12 @@
 {
   "domain": "betterstack_uptime",
   "name": "Better Stack Uptime",
+  "categories": ["computers_network.monitoring"],
   "codeowners": ["@yayadrian"],
   "config_flow": true,
   "documentation": "https://github.com/yayadrian/HA-Betterstack-Uptime",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/yayadrian/HA-Betterstack-Uptime/issues",
-  "version": "0.0.1",
-  "homeassistant": "2026.2.0"
+  "version": "0.0.1"
 }

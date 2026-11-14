@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 
 from custom_components.betterstack_uptime.const import (
+    API_TOKEN_URL,
     CONF_API_TOKEN,
     CONF_POLL_INTERVAL,
     DEFAULT_POLL_INTERVAL,
@@ -54,6 +55,7 @@ async def test_user_flow_success(hass: HomeAssistant) -> None:
     )
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "user"
+    assert result["description_placeholders"] == {"token_url": API_TOKEN_URL}
 
     with _patch_session(_mock_response(200)):
         result = await hass.config_entries.flow.async_configure(

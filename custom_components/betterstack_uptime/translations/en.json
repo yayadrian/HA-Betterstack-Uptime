@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Connect to Better Stack Uptime",
-        "description": "Enter your Better Stack API token. You can find it at https://betterstack.com/settings/global-api-tokens",
+        "description": "Enter your Better Stack API token. You can create one at {token_url} under **Team-based tokens**.",
         "data": {
           "api_token": "API Token",
           "poll_interval": "Poll interval (seconds)"

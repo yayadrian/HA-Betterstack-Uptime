@@ -21,6 +21,7 @@ from .const import (
     MAX_POLL_INTERVAL,
     MIN_POLL_INTERVAL,
     API_BASE_URL,
+    API_TOKEN_URL,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -87,6 +88,7 @@ class BetterStackUptimeConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=STEP_USER_DATA_SCHEMA,
             errors=errors,
+            description_placeholders={"token_url": API_TOKEN_URL},
         )
 
 

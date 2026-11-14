@@ -10,6 +10,7 @@ MIN_POLL_INTERVAL = 15
 MAX_POLL_INTERVAL = 3600
 
 API_BASE_URL = "https://uptime.betterstack.com/api/v2"
+API_TOKEN_URL = "https://betterstack.com/settings/global-api-tokens"
 
 # Supported Better Stack monitor statuses for enum sensor metadata
 MONITOR_STATUS_OPTIONS = [
