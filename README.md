@@ -3,22 +3,25 @@
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/yayadrian)
 [![](https://img.shields.io/static/v1?label=Support&message=Ko-fi&logo=kofi&color=%23FF6433&logoColor=white)](https://ko-fi.com/yayadrian)
 
-A custom [Home Assistant](https://www.home-assistant.io/) integration that monitors your [Better Stack Uptime](https://betterstack.com/uptime) monitors. Each monitor gets a device with two entities — a binary sensor indicating whether the monitor is up, and a sensor showing the monitor status.
+A custom [Home Assistant](https://www.home-assistant.io/) integration that tracks your [Better Stack Uptime](https://betterstack.com/uptime) monitors and heartbeats. Each one gets a device with two entities — a binary sensor indicating whether it is up, and a sensor showing its status.
+
+- **Monitors** are checks where Better Stack probes a URL, host or port.
+- **Heartbeats** are checks where your own job (a backup, cron task or script) calls Better Stack, which raises an incident when a call is late.
 
 > [!WARNING]
 > This is an unofficial community integration. It is not created by, affiliated with, endorsed by, or supported by Better Stack.
 
 ## Features
 
-- **Binary sensor** (`connectivity`) — `on` when the monitor status is `up` or `validating`, `off` for `down`, `pending`, `paused` or `maintenance`, and unknown for any status Better Stack adds in future.
-- **Status sensor** (`enum`) — the monitor status: `up`, `down`, `pending`, `paused`, `maintenance` or `validating`.
-- **Extra attributes** on both entities: `monitor_type`, `url`, `pronounceable_name`, `last_checked_at`.
-- Automatic discovery of new monitors on each poll cycle.
-- Automatic cleanup of entities for monitors removed from Better Stack.
+- **Binary sensor** — `on` when the status is `up` or `validating`, `off` for `down`, `pending`, `paused` or `maintenance`, and unknown for any status Better Stack adds in future.
+- **Status sensor** (`enum`) — the status: `up`, `down`, `pending`, `paused`, `maintenance` or `validating`.
+- **Extra attributes** on both entities — see [Entities](#entities).
+- Automatic discovery of new monitors and heartbeats on each poll cycle.
+- Automatic cleanup of entities for monitors and heartbeats removed from Better Stack.
 - Configurable poll interval (15 – 3600 seconds, default 60).
-- Full pagination support for accounts with many monitors.
+- Full pagination support for accounts with many monitors or heartbeats.
 - Prompts for a new API token if Better Stack rejects the current one.
-- Diagnostics download with the API token and monitor URLs redacted.
+- Diagnostics download with the API token and monitor URLs redacted. Heartbeat URLs are never stored.
 
 ## Requirements
 
@@ -63,12 +66,26 @@ If the token is later revoked or expires, Home Assistant flags the integration a
 
 ## Entities
 
-For each monitor returned by the Better Stack API, a device is created with:
+For each monitor and each heartbeat returned by the Better Stack API, a device is created with:
 
 | Entity | Type | Description |
 | --- | --- | --- |
-| **Up** | Binary sensor | `on` if the monitor status is `up` or `validating`; unknown for an unrecognised status |
+| **Up** | Binary sensor | `on` if the status is `up` or `validating`; unknown for an unrecognised status |
 | **Status** | Enum sensor | `up`, `down`, `pending`, `paused`, `maintenance` or `validating`; any other value from Better Stack is shown as unknown |
+
+### Monitors
+
+- The Up sensor uses the `connectivity` device class (Connected/Disconnected).
+- The device model is `Uptime <monitor type>`, for example `Uptime keyword`.
+- Extra attributes: `monitor_type`, `url`, `pronounceable_name`, `last_checked_at`.
+
+### Heartbeats
+
+- The Up sensor has no device class, so it shows On/Off.
+- The device model is `Heartbeat`.
+- Extra attributes: `period` and `grace` (both in seconds) and `paused_at`.
+- The heartbeat URL is never exposed, because anyone who has it can report on the heartbeat's behalf.
+- If your API token cannot read heartbeats, a warning is logged and only monitors are shown.
 
 ## License
 

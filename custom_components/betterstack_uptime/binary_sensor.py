@@ -9,11 +9,11 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import MONITOR_STATUS_OPTIONS, STATUSES_UP
+from .const import CHECK_STATUS_OPTIONS, STATUSES_UP
 from .coordinator import BetterStackConfigEntry, BetterStackCoordinator
 from .entity import (
     BetterStackEntity,
-    async_remove_missing_monitors,
+    async_remove_missing_checks,
     async_remove_stale_registry_entities,
 )
 
@@ -41,10 +41,10 @@ async def async_setup_entry(
     )
 
     @callback
-    def _async_add_new_monitors() -> None:
-        """Detect and add entities for newly discovered monitors."""
+    def _async_add_new_checks() -> None:
+        """Detect and add entities for newly discovered checks."""
         current_ids = set(coordinator.data)
-        async_remove_missing_monitors(
+        async_remove_missing_checks(
             hass,
             current_ids,
             known_ids,
@@ -53,38 +53,41 @@ async def async_setup_entry(
         )
 
         new_entities: list[BetterStackUpBinarySensor] = []
-        for monitor_id in current_ids:
-            if monitor_id not in known_ids:
-                known_ids.add(monitor_id)
-                new_entities.append(BetterStackUpBinarySensor(coordinator, monitor_id))
+        for check_id in current_ids:
+            if check_id not in known_ids:
+                known_ids.add(check_id)
+                new_entities.append(BetterStackUpBinarySensor(coordinator, check_id))
         if new_entities:
             async_add_entities(new_entities)
 
     # Add entities for initial data
-    _async_add_new_monitors()
+    _async_add_new_checks()
 
-    # Listen for future updates to pick up dynamically added monitors
-    entry.async_on_unload(coordinator.async_add_listener(_async_add_new_monitors))
+    # Listen for future updates to pick up dynamically added checks
+    entry.async_on_unload(coordinator.async_add_listener(_async_add_new_checks))
 
 
 class BetterStackUpBinarySensor(BetterStackEntity, BinarySensorEntity):
-    """Binary sensor: is the monitor up?"""
+    """Binary sensor: is the check up?"""
 
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
     _attr_translation_key = "up"
 
     def __init__(
-        self, coordinator: BetterStackCoordinator, monitor_id: str
+        self, coordinator: BetterStackCoordinator, check_id: str
     ) -> None:
         """Initialize the binary sensor."""
-        super().__init__(coordinator, monitor_id)
-        self._attr_unique_id = f"{monitor_id}-up"
+        super().__init__(coordinator, check_id)
+        self._attr_unique_id = f"{check_id}-up"
+        # "Connected" reads wrongly for a scheduled job, so heartbeats show On/Off
+        if self._is_heartbeat:
+            self._attr_device_class = None
 
     @property
     def is_on(self) -> bool | None:
-        """Return True when the monitor is up, or None for an unrecognised status."""
-        if (data := self._monitor_data) is None:
+        """Return True when the check is up, or None for an unrecognised status."""
+        if (data := self._check_data) is None:
             return None
-        if (status := data["status"]) not in MONITOR_STATUS_OPTIONS:
+        if (status := data["status"]) not in CHECK_STATUS_OPTIONS:
             return None
         return status in STATUSES_UP
