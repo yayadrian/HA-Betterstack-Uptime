@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import UpdateFailed
@@ -12,7 +12,7 @@ from homeassistant.helpers.update_coordinator import UpdateFailed
 from custom_components.betterstack_uptime.const import DOMAIN
 from custom_components.betterstack_uptime.coordinator import BetterStackCoordinator
 
-from .conftest import TEST_API_TOKEN, make_monitor, mock_api_page, MOCK_MONITORS
+from .conftest import make_monitor, mock_api_page, MOCK_MONITORS
 
 
 def _mock_coordinator_session(page: dict) -> patch:
@@ -40,10 +40,11 @@ async def test_setup_entry(hass: HomeAssistant, mock_config_entry) -> None:
         result = await hass.config_entries.async_setup(mock_config_entry.entry_id)
 
     assert result is True
-    assert DOMAIN in hass.data
-    assert mock_config_entry.entry_id in hass.data[DOMAIN]
+    assert mock_config_entry.state is ConfigEntryState.LOADED
 
-    coordinator = hass.data[DOMAIN][mock_config_entry.entry_id]
+    coordinator = mock_config_entry.runtime_data
+    assert isinstance(coordinator, BetterStackCoordinator)
+    assert coordinator.config_entry is mock_config_entry
     assert len(coordinator.data) == 3
 
 
@@ -55,7 +56,7 @@ async def test_unload_entry(hass: HomeAssistant, mock_config_entry) -> None:
 
     result = await hass.config_entries.async_unload(mock_config_entry.entry_id)
     assert result is True
-    assert mock_config_entry.entry_id not in hass.data[DOMAIN]
+    assert mock_config_entry.state is ConfigEntryState.NOT_LOADED
 
 
 async def test_setup_entry_failure(hass: HomeAssistant, mock_config_entry) -> None:
@@ -68,7 +69,7 @@ async def test_setup_entry_failure(hass: HomeAssistant, mock_config_entry) -> No
         result = await hass.config_entries.async_setup(mock_config_entry.entry_id)
 
     assert result is False
-    assert mock_config_entry.entry_id not in hass.data.get(DOMAIN, {})
+    assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
 
 
 async def test_removed_monitors_are_cleaned_up(hass: HomeAssistant, mock_config_entry) -> None:
@@ -77,7 +78,7 @@ async def test_removed_monitors_are_cleaned_up(hass: HomeAssistant, mock_config_
         await hass.config_entries.async_setup(mock_config_entry.entry_id)
         await hass.async_block_till_done()
 
-    coordinator = hass.data[DOMAIN][mock_config_entry.entry_id]
+    coordinator = mock_config_entry.runtime_data
     entity_registry = er.async_get(hass)
 
     binary_entity_id = entity_registry.async_get_entity_id(

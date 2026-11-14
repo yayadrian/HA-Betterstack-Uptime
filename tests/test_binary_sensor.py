@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
-
 import pytest
 from homeassistant.core import HomeAssistant
 
@@ -13,12 +11,12 @@ from custom_components.betterstack_uptime.binary_sensor import (
 from custom_components.betterstack_uptime.const import DOMAIN
 from custom_components.betterstack_uptime.coordinator import BetterStackCoordinator
 
-from .conftest import TEST_API_TOKEN
+from .conftest import make_config_entry
 
 
 def _make_coordinator(hass: HomeAssistant, data: dict) -> BetterStackCoordinator:
     """Create a coordinator with preset data."""
-    coordinator = BetterStackCoordinator(hass, TEST_API_TOKEN, 60)
+    coordinator = BetterStackCoordinator(hass, make_config_entry())
     coordinator.data = data
     return coordinator
 
@@ -109,8 +107,9 @@ async def test_unavailable_when_monitor_missing(hass: HomeAssistant) -> None:
 
 async def test_dynamic_monitors(hass: HomeAssistant, mock_config_entry) -> None:
     """Test new monitors are added when coordinator data updates."""
-    coordinator = _make_coordinator(hass, _monitor_data("1", name="First"))
-    hass.data.setdefault(DOMAIN, {})[mock_config_entry.entry_id] = coordinator
+    coordinator = BetterStackCoordinator(hass, mock_config_entry)
+    coordinator.data = _monitor_data("1", name="First")
+    mock_config_entry.runtime_data = coordinator
 
     added_entities: list = []
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
@@ -229,15 +230,19 @@ async def test_options_flow(hass: HomeAssistant, mock_config_entry) -> None:
         await hass.config_entries.async_setup(mock_config_entry.entry_id)
         await hass.async_block_till_done()
 
-    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "init"
+        result = await hass.config_entries.options.async_init(
+            mock_config_entry.entry_id
+        )
+        assert result["type"] is FlowResultType.FORM
+        assert result["step_id"] == "init"
 
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"],
-        {CONF_POLL_INTERVAL: 300},
-    )
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"],
+            {CONF_POLL_INTERVAL: 300},
+        )
+        await hass.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {CONF_POLL_INTERVAL: 300}
     assert mock_config_entry.options[CONF_POLL_INTERVAL] == 300
+    assert mock_config_entry.runtime_data.update_interval == timedelta(seconds=300)

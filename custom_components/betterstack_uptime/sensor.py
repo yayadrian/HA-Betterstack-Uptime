@@ -3,26 +3,28 @@
 from __future__ import annotations
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import DOMAIN, MONITOR_STATUS_OPTIONS
-from .coordinator import BetterStackCoordinator
+from .const import MONITOR_STATUS_OPTIONS
+from .coordinator import BetterStackConfigEntry, BetterStackCoordinator
 from .entity import (
     BetterStackEntity,
     async_remove_missing_monitors,
     async_remove_stale_registry_entities,
 )
 
+# Coordinator-based platform; entities never poll individually
+PARALLEL_UPDATES = 0
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    entry: BetterStackConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up sensors from a config entry."""
-    coordinator: BetterStackCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
 
     known_ids: set[str] = set()
     current_ids = set(coordinator.data)

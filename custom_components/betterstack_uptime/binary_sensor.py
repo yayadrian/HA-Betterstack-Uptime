@@ -6,26 +6,28 @@ from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import DOMAIN, STATUSES_UP
-from .coordinator import BetterStackCoordinator
+from .const import STATUSES_UP
+from .coordinator import BetterStackConfigEntry, BetterStackCoordinator
 from .entity import (
     BetterStackEntity,
     async_remove_missing_monitors,
     async_remove_stale_registry_entities,
 )
 
+# Coordinator-based platform; entities never poll individually
+PARALLEL_UPDATES = 0
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    entry: BetterStackConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up binary sensors from a config entry."""
-    coordinator: BetterStackCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
 
     known_ids: set[str] = set()
     current_ids = set(coordinator.data)
