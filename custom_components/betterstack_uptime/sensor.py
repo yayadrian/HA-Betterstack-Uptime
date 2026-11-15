@@ -28,13 +28,6 @@ async def async_setup_entry(
 
     known_ids: set[str] = set()
 
-    async_remove_stale_registry_entities(
-        hass,
-        entry,
-        "sensor",
-        "status",
-    )
-
     @callback
     def _async_add_new_checks() -> None:
         """Detect and add entities for newly discovered checks."""
@@ -42,6 +35,14 @@ async def async_setup_entry(
             hass,
             coordinator,
             known_ids,
+            "sensor",
+            "status",
+        )
+        # Also catches registry entries kept while heartbeats were unreadable,
+        # which were never added to known_ids
+        async_remove_stale_registry_entities(
+            hass,
+            entry,
             "sensor",
             "status",
         )

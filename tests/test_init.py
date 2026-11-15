@@ -230,3 +230,29 @@ async def test_heartbeats_kept_on_reload_without_access(
     entity_registry = er.async_get(hass)
     assert entity_registry.async_get_entity_id("binary_sensor", DOMAIN, "heartbeat-1-up")
     assert entity_registry.async_get_entity_id("sensor", DOMAIN, "heartbeat-1-status")
+
+
+async def test_heartbeat_deleted_while_access_lost_is_cleaned_up(
+    hass: HomeAssistant, mock_config_entry
+) -> None:
+    """Test a heartbeat kept over a reload without access is removed once access shows it is gone."""
+    await _setup_monitor_and_heartbeat(hass, mock_config_entry)
+    assert await hass.config_entries.async_unload(mock_config_entry.entry_id)
+
+    with mock_session([mock_api_page([make_monitor("1", "Website")])], [403]):
+        assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+
+    entity_registry = er.async_get(hass)
+    assert entity_registry.async_get_entity_id("binary_sensor", DOMAIN, "heartbeat-1-up")
+
+    # Access returns, but the heartbeat was deleted in Better Stack meanwhile
+    with mock_session(
+        [mock_api_page([make_monitor("1", "Website")])], [mock_api_page([])]
+    ):
+        await mock_config_entry.runtime_data.async_refresh()
+        await hass.async_block_till_done()
+
+    assert entity_registry.async_get_entity_id("binary_sensor", DOMAIN, "heartbeat-1-up") is None
+    assert entity_registry.async_get_entity_id("sensor", DOMAIN, "heartbeat-1-status") is None
+    assert entity_registry.async_get_entity_id("binary_sensor", DOMAIN, "1-up")
