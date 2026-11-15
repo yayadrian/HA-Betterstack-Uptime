@@ -6,7 +6,7 @@ import pytest
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.core import HomeAssistant
 
-from custom_components.betterstack_uptime.const import DOMAIN, MONITOR_STATUS_OPTIONS
+from custom_components.betterstack_uptime.const import DOMAIN, CHECK_STATUS_OPTIONS
 from custom_components.betterstack_uptime.coordinator import BetterStackCoordinator
 from custom_components.betterstack_uptime.sensor import BetterStackStatusSensor
 
@@ -40,6 +40,26 @@ def _monitor_data(
     }
 
 
+def _heartbeat_data(
+    heartbeat_id: str = "100",
+    status: str | None = "up",
+    name: str = "Nightly Backup",
+    period: int = 86400,
+    grace: int = 300,
+    paused_at: str | None = None,
+) -> dict:
+    return {
+        f"heartbeat-{heartbeat_id}": {
+            "id": heartbeat_id,
+            "name": name,
+            "status": status,
+            "period": period,
+            "grace": grace,
+            "paused_at": paused_at,
+        }
+    }
+
+
 @pytest.mark.parametrize(
     "status",
     ["up", "down", "pending", "validating", "paused", "maintenance"],
@@ -67,7 +87,7 @@ async def test_sensor_exposes_enum_metadata(hass: HomeAssistant) -> None:
     sensor = BetterStackStatusSensor(coordinator, "100")
 
     assert sensor.device_class == SensorDeviceClass.ENUM
-    assert sensor.options == MONITOR_STATUS_OPTIONS
+    assert sensor.options == CHECK_STATUS_OPTIONS
     assert "unknown" not in sensor.options
 
 
@@ -153,3 +173,17 @@ async def test_dynamic_monitors(hass: HomeAssistant, mock_config_entry) -> None:
 
     assert len(added_entities) == 2
     assert added_entities[1].unique_id == "2-status"
+
+
+async def test_heartbeat_native_value(hass: HomeAssistant) -> None:
+    """Test heartbeat status sensors report the raw status."""
+    coordinator = _make_coordinator(hass, _heartbeat_data(status="down"))
+    sensor = BetterStackStatusSensor(coordinator, "heartbeat-100")
+    assert sensor.native_value == "down"
+
+
+async def test_heartbeat_unique_id(hass: HomeAssistant) -> None:
+    """Test heartbeat unique IDs carry the heartbeat- prefix."""
+    coordinator = _make_coordinator(hass, _heartbeat_data())
+    sensor = BetterStackStatusSensor(coordinator, "heartbeat-100")
+    assert sensor.unique_id == "heartbeat-100-status"

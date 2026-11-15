@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import hashlib
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import aiohttp
 
 import pytest
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.betterstack_uptime.const import (
+    API_BASE_URL,
     CONF_API_TOKEN,
     CONF_POLL_INTERVAL,
     DOMAIN,
@@ -51,10 +54,92 @@ MOCK_MONITORS = [
 ]
 
 
-def mock_api_page(monitors: list[dict], next_url: str | None = None) -> dict:
+def make_heartbeat(
+    heartbeat_id: str,
+    name: str = "My Heartbeat",
+    status: str = "up",
+    period: int = 86400,
+    grace: int = 300,
+    paused_at: str | None = None,
+    url: str = "https://uptime.betterstack.com/api/v1/heartbeat/secret-token",
+) -> dict:
+    """Build an API heartbeat item."""
+    return {
+        "id": heartbeat_id,
+        "type": "heartbeat",
+        "attributes": {
+            "name": name,
+            "status": status,
+            "period": period,
+            "grace": grace,
+            "paused_at": paused_at,
+            "url": url,
+        },
+    }
+
+
+MOCK_HEARTBEATS = [
+    make_heartbeat("1001", "Nightly Backup", "up"),
+    make_heartbeat("2001", "Cron Cleanup", "down", period=3600, grace=60),
+]
+
+
+def mock_api_page(items: list[dict], next_url: str | None = None) -> dict:
     """Build an API response payload."""
     pagination = {"next": next_url} if next_url else {"next": None}
-    return {"data": monitors, "pagination": pagination}
+    return {"data": items, "pagination": pagination}
+
+
+def _mock_response(page: dict | int) -> AsyncMock:
+    """Build a response for a page payload, or an HTTP error for a status code."""
+    resp = AsyncMock()
+    if isinstance(page, int):
+        resp.status = page
+        resp.raise_for_status = MagicMock(
+            side_effect=aiohttp.ClientResponseError(
+                request_info=MagicMock(), history=(), status=page
+            )
+        )
+    else:
+        resp.status = 200
+        resp.raise_for_status = MagicMock()
+        resp.json = AsyncMock(return_value=page)
+    return resp
+
+
+def mock_session(
+    monitor_pages: list[dict | int],
+    heartbeat_pages: list[dict | int] | None = None,
+) -> patch:
+    """Patch the client session to serve monitor and heartbeat pages by URL.
+
+    Each endpoint's first page is served at its base URL and every later page
+    at the previous page's ``pagination.next``. An int in place of a page makes
+    that request fail with that HTTP status.
+    """
+    if heartbeat_pages is None:
+        heartbeat_pages = [mock_api_page([])]
+
+    routes: dict[str, dict | int] = {}
+    for endpoint, pages in (("monitors", monitor_pages), ("heartbeats", heartbeat_pages)):
+        url: str | None = f"{API_BASE_URL}/{endpoint}"
+        for page in pages:
+            routes[url] = page
+            url = None if isinstance(page, int) else page["pagination"]["next"]
+
+    def get(url: str, **kwargs) -> AsyncMock:
+        ctx = AsyncMock()
+        ctx.__aenter__ = AsyncMock(return_value=_mock_response(routes[url]))
+        ctx.__aexit__ = AsyncMock(return_value=False)
+        return ctx
+
+    session = MagicMock()
+    session.get = MagicMock(side_effect=get)
+
+    return patch(
+        "custom_components.betterstack_uptime.coordinator.async_get_clientsession",
+        return_value=session,
+    )
 
 
 def make_config_entry() -> MockConfigEntry:
@@ -103,5 +188,13 @@ def mock_coordinator_data():
             "monitor_type": "ping",
             "url": "https://staging.example.com",
             "last_checked_at": "2025-01-01T00:00:00Z",
+        },
+        "heartbeat-1001": {
+            "id": "1001",
+            "name": "Nightly Backup",
+            "status": "up",
+            "period": 86400,
+            "grace": 300,
+            "paused_at": None,
         },
     }

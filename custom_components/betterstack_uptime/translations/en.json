@@ -9,8 +9,8 @@
           "poll_interval": "Poll interval (seconds)"
         },
         "data_description": {
-          "api_token": "Your Better Stack API token with read access to Uptime monitors.",
-          "poll_interval": "How often (in seconds) to poll Better Stack for monitor status updates."
+          "api_token": "Your Better Stack API token with read access to Uptime monitors and heartbeats.",
+          "poll_interval": "How often (in seconds) to poll Better Stack for monitor and heartbeat status updates."
         }
       },
       "reauth_confirm": {
@@ -20,7 +20,7 @@
           "api_token": "API Token"
         },
         "data_description": {
-          "api_token": "Your Better Stack API token with read access to Uptime monitors."
+          "api_token": "Your Better Stack API token with read access to Uptime monitors and heartbeats."
         }
       }
     },
@@ -43,7 +43,7 @@
           "poll_interval": "Poll interval (seconds)"
         },
         "data_description": {
-          "poll_interval": "How often (in seconds) to poll Better Stack for monitor status updates."
+          "poll_interval": "How often (in seconds) to poll Better Stack for monitor and heartbeat status updates."
         }
       }
     }
